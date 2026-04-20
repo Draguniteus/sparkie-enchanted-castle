@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sparkie — Enchanted Castle</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #050510; font-family: 'Georgia', serif; }
+    canvas { display: block; }
+    #hint { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); color: rgba(180,150,220,0.4); font-size: 12px; letter-spacing: 0.08em; pointer-events: none; opacity: 1; transition: opacity 2s ease; }
+    #title { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); color: rgba(160,130,200,0.4); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+<div id="title">🏰 ENCHANTED CASTLE 👑</div>
+<div id="hint">drag to orbit</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(0, 15, 45);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.08;
+controls.maxPolarAngle = Math.PI * 0.6;
+controls.minDistance = 10;
+controls.maxDistance = 90;
+
+scene.add(new THREE.AmbientLight(0x100820, 0.3));
+
+const stoneMat = new THREE.MeshStandardMaterial({ color: 0x3a3540, roughness: 0.9 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9 });
+
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(120, 120, 60, 60),
+  new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.95 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// Main castle structure
+const mainBody = new THREE.Mesh(new THREE.BoxGeometry(20, 25, 30), stoneMat);
+mainBody.position.set(0, 12.5, 0);
+scene.add(mainBody);
+
+// Central tower
+const tower = new THREE.Mesh(new THREE.CylinderGeometry(5, 6, 35, 16), stoneMat);
+tower.position.set(0, 17.5, -8);
+scene.add(tower);
+
+// Tower spire
+const spire = new THREE.Mesh(new THREE.ConeGeometry(4, 15, 16), stoneMat);
+spire.position.set(0, 42.5, -8);
+scene.add(spire);
+
+// Golden flag on spire
+const flag = new THREE.Mesh(new THREE.BoxGeometry(3, 2, 0.1), goldMat);
+flag.position.set(0, 48, -8);
+scene.add(flag);
+
+// Corner towers
+for (let ct = 0; ct < 4; ct++) {
+  const angle = (ct / 4) * Math.PI * 2 + Math.PI / 4;
+  const cx = Math.cos(angle) * 18;
+  const cz = Math.sin(angle) * 18;
+  
+  const cornerTower = new THREE.Mesh(new THREE.CylinderGeometry(4, 5, 30, 12), stoneMat);
+  cornerTower.position.set(cx, 15, cz);
+  scene.add(cornerTower);
+  
+  const cornerSpire = new THREE.Mesh(new THREE.ConeGeometry(3, 12, 12), stoneMat);
+  cornerSpire.position.set(cx, 36, cz);
+  scene.add(cornerSpire);
+}
+
+// Battlements
+for (let b = 0; b < 40; b++) {
+  const bx = (Math.random() - 0.5) * 20;
+  const bz = (Math.random() - 0.5) * 30;
+  const battlement = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2, 1), stoneMat);
+  battlement.position.set(bx, 25 + Math.random() * 0.5, bz);
+  scene.add(battlement);
+}
+
+// Gate
+const gate = new THREE.Mesh(
+  new THREE.BoxGeometry(6, 10, 3),
+  new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
+);
+gate.position.set(0, 5, 15);
+scene.add(gate);
+
+// Drawbridge
+const bridge = new THREE.Mesh(
+  new THREE.BoxGeometry(5, 0.5, 8),
+  new THREE.MeshStandardMaterial({ color: 0x4a3020 })
+);
+bridge.position.set(0, 0.25, 20);
+scene.add(bridge);
+
+// Portcullis
+const grate = new THREE.Mesh(
+  new THREE.BoxGeometry(5, 8, 0.5),
+  new THREE.MeshStandardMaterial({ color: 0x2a2a30, metalness: 0.8 })
+);
+grate.position.set(0, 5, 15.5);
+scene.add(grate);
+
+// Windows with warm glow
+for (let w = 0; w < 20; w++) {
+  const winMat = new THREE.MeshStandardMaterial({ 
+    color: 0xffaa44, 
+    emissive: 0xff8800, 
+    emissiveIntensity: 1.5 
+  });
+  const win = new THREE.Mesh(new THREE.CircleGeometry(1, 12), winMat);
+  
+  const side = Math.floor(Math.random() * 4);
+  if (side === 0) {
+    win.position.set(-10, 5 + Math.random() * 15, 15);
+  } else if (side === 1) {
+    win.position.set(10, 5 + Math.random() * 15, 15);
+  } else if (side === 2) {
+    win.position.set((Math.random() - 0.5) * 10, 5 + Math.random() * 20, 0);
+    win.rotation.y = Math.PI;
+  } else {
+    win.position.set(0, 5 + Math.random() * 30, -8);
+  }
+  scene.add(win);
+  
+  const wLight = new THREE.PointLight(0xff8833, 1.5, 8);
+  wLight.position.copy(win.position);
+  scene.add(wLight);
+}
+
+// Banners with crest
+const bannerColors = [0x880022, 0x002288, 0x228822, 0x888800];
+for (let bn = 0; bn < 8; bn++) {
+  const angle = (bn / 8) * Math.PI * 2;
+  const r = 12;
+  const bnx = Math.cos(angle) * r;
+  const bnz = Math.sin(angle) * r;
+  
+  const bannerPole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 8, 6),
+    stoneMat
+  );
+  bannerPole.position.set(bnx, 29, bnz);
+  scene.add(bannerPole);
+  
+  const banner = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 4),
+    new THREE.MeshStandardMaterial({ color: bannerColors[bn % 4], roughness: 0.9, side: THREE.DoubleSide })
+  );
+  banner.position.set(bnx, 25, bnz);
+  scene.add(banner);
+}
+
+// Grand courtyard fountain
+const fountainBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(5, 5.5, 1.5, 16),
+  stoneMat
+);
+fountainBase.position.set(0, 0.75, 5);
+scene.add(fountainBase);
+
+const fountainBowl = new THREE.Mesh(
+  new THREE.CylinderGeometry(4.5, 4, 1, 16),
+  stoneMat
+);
+fountainBowl.position.set(0, 2, 5);
+scene.add(fountainBowl);
+
+const fountainWater = new THREE.Mesh(
+  new THREE.CircleGeometry(4.2, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2a4a6a, transparent: true, opacity: 0.8 })
+);
+fountainWater.rotation.x = -Math.PI / 2;
+fountainWater.position.set(0, 2.6, 5);
+scene.add(fountainWater);
+
+// Fountain spray
+const sprayCount = 80;
+const sprayPos = new Float32Array(sprayCount * 3);
+const sprayPhases = new Float32Array(sprayCount);
+for (let i = 0; i < sprayCount; i++) {
+  sprayPos[i*3] = (Math.random() - 0.5) * 2;
+  sprayPos[i*3+1] = 3 + Math.random() * 5;
+  sprayPos[i*3+2] = 5 + (Math.random() - 0.5) * 2;
+  sprayPhases[i] = Math.random() * Math.PI * 2;
+}
+const sprayGeo = new THREE.BufferGeometry();
+sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
+const sprayMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    uniform float uTime;
+    void main() {
+      vec3 p = position;
+      p.y = 3.0 + mod(p.y + uTime * 2.0 - 3.0, 5.0);
+      p.x += sin(uTime * 3.0 + position.y) * 0.3;
+      p.z += cos(uTime * 2.5 + position.y) * 0.3;
+      gl_PointSize = 5.0;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }
+  `,
+  fragmentShader: `
+    void main() {
+      float d = length(gl_PointCoord - 0.5);
+      if (d > 0.5) discard;
+      float a = (1.0 - d * 2.0) * 0.6;
+      vec3 col = vec3(0.5, 0.8, 1.0);
+      gl_FragColor = vec4(col, a);
+    }
+  `,
+  transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const spray = new THREE.Points(sprayGeo, sprayMat);
+spray.userData.phases = sprayPhases;
+spray.userData.positions = sprayPos;
+spray.userData.isSpray = true;
+scene.add(spray);
+
+// Courtyard torches
+for (let t = 0; t < 8; t++) {
+  const angle = (t / 8) * Math.PI * 2;
+  const tx = Math.cos(angle) * 12;
+  const tz = Math.sin(angle) * 12 + 5;
+  
+  const torchPole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 4, 6),
+    stoneMat
+  );
+  torchPole.position.set(tx, 2, tz);
+  scene.add(torchPole);
+  
+  const flame = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0xff6600, emissiveIntensity: 3.0 })
+  );
+  flame.position.set(tx, 4.5, tz);
+  scene.add(flame);
+  
+  const tLight = new THREE.PointLight(0xff8833, 3, 12);
+  tLight.position.set(tx, 5, tz);
+  scene.add(tLight);
+}
+
+// Stars
+const starCount = 1500;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const r = 150 + Math.random() * 50;
+  starPos[i*3] = Math.cos(theta) * r;
+  starPos[i*3+1] = 30 + Math.random() * 70;
+  starPos[i*3+2] = Math.sin(theta) * r;
+}
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, sizeAttenuation: true })));
+
+// Moon
+const moon = new THREE.Mesh(
+  new THREE.SphereGeometry(8, 24, 24),
+  new THREE.MeshStandardMaterial({ color: 0xe8e4cc, emissive: 0xaaa888, emissiveIntensity: 0.2 })
+);
+moon.position.set(40, 60, -80);
+scene.add(moon);
+
+// Firefly particles
+const ffCount = 100;
+const ffPos = new Float32Array(ffCount * 3);
+const ffPhases = new Float32Array(ffCount);
+for (let i = 0; i < ffCount; i++) {
+  ffPos[i*3] = (Math.random() - 0.5) * 50;
+  ffPos[i*3+1] = 2 + Math.random() * 25;
+  ffPos[i*3+2] = (Math.random() - 0.5) * 50;
+  ffPhases[i] = Math.random() * Math.PI * 2;
+}
+const ffGeo = new THREE.BufferGeometry();
+ffGeo.setAttribute('position', new THREE.BufferAttribute(ffPos, 3));
+const ffMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  vertexShader: `
+    uniform float uTime;
+    void main() {
+      vec3 p = position;
+      p.x += sin(uTime * 0.5 + position.z * 0.1) * 0.8;
+      p.y += cos(uTime * 0.3 + position.x * 0.1) * 0.5;
+      gl_PointSize = 10.0;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    }
+  `,
+  fragmentShader: `
+    void main() {
+      float d = length(gl_PointCoord - 0.5);
+      if (d > 0.5) discard;
+      float a = 1.0 - d * 2.0;
+      vec3 col = vec3(0.9, 0.8, 0.4);
+      gl_FragColor = vec4(col, a * 0.8);
+    }
+  `,
+  transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const fireflies = new THREE.Points(ffGeo, ffMat);
+fireflies.userData.phases = ffPhases;
+fireflies.userData.positions = ffPos;
+fireflies.userData.isFireflies = true;
+scene.add(fireflies);
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  
+  if (spray.userData.isSpray) spray.material.uniforms.uTime.value = t;
+  if (fireflies.userData.isFireflies) {
+    const pos = fireflies.userData.positions;
+    for (let i = 0; i < pos.length / 3; i++) {
+      pos[i*3] += Math.sin(t * 0.5 + pos[i*3+2] * 0.1) * 0.015;
+      pos[i*3+1] += Math.cos(t * 0.3 + i) * 0.008;
+    }
+    fireflies.geometry.attributes.position.needsUpdate = true;
+    fireflies.material.uniforms.uTime.value = t;
+  }
+  
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+setTimeout(() => { document.getElementById('hint').style.opacity = '0'; }, 5000);
+</script>
+</body>
+</html>
